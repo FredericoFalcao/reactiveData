@@ -3,7 +3,54 @@
 *   
 *     2. PLT-Level 
 *     
-*     Depends on tables: 
+ * Overview:
+* This PHP script automates database updates by processing rows marked for action in various tables.
+* It dynamically executes predefined functions based on table-specific instructions stored in the database.
+* Functions are executed in either PHP or Python environments depending on configuration.
+* 
+* How It Works:
+* 1. The script queries the `SYS_PRD_BND.Tables` table to determine which tables require processing.
+* 2. For each identified table, it selects rows updated since the last run (based on the `LastUpdated` column).
+* 3. Each row is individually processed through:
+*     - PHP-level triggers defined in system-level or database-level code.
+*     - Python-level triggers similarly defined.
+* 4. If a trigger modifies the row, the script updates the database with new values.
+* 5. Errors encountered during processing are logged and sent as notifications via Telegram.
+* 
+* Tables and Their Purpose:
+* - SYS_PRD_BND.Tables:
+*   Defines active tables and their respective PHP or Python trigger codes.
+*   Columns: Name, onUpdate_phpCode, onUpdate_pyCode, LastUpdated, LastError
+*
+* - SYS_PRD_BND.Constants:
+*   Holds constants that are injected into the PHP environment during execution.
+*   Columns: Name, Type, Value
+* 
+* - SYS_PRD_BND.SupportFunctions:
+*   Stores reusable PHP functions available during trigger execution.
+*   Columns: Name, InputArgs_json, PhpCode
+*
+* - SYS_PRD_BND.PyPi:
+*   Lists external Python libraries imported into Python trigger execution.
+*   Columns: LibName, AliasName
+* 
+* Dynamic Tables:
+* - Application-specific tables, each must include at least:
+*   - LastUpdated (timestamp for tracking)
+*   - Primary key columns for row identification (defined externally)
+*
+* Important Functions:
+* - sendTelegramMessage($message, $dstUsers): Sends notifications to a specified Telegram group.
+* - runProcess($command, $code, &$stdout, &$error): Executes external PHP/Python code securely.
+*
+* Usage:
+* Ensure proper configuration of constants, Telegram bot token, and required Python modules.
+* Regularly schedule this script to automate database maintenance and data integrity tasks.
+*
+*
+*
+*
+*     Expects tables: 
 *      SYS_PRD_BND.Tables (Name, onUpdate_phpCode, onUpdate_pyCode, LastUpdated, LastError)
 *      SYS_PRD_BND.Constants (Name, Type, Value)
 *      SYS_PRD_BND.SupportFunctions (Name, InputArgs_json, PhpCode)
