@@ -11,6 +11,7 @@ function processAllTheActiveTables() {
     extract($activeTable);
     echo "Found Table : ".greenText($Name)."\n";
     echo "Scanning all the rows in table $Name that need to be ran through trigger code:\n";
+    // @todo: check if the table has a column called : LastUpdated. If try to auto-create it. (ALTER TABLE ... LastUpdated DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)
     foreach(sql("SELECT * FROM $Name WHERE LastUpdated > '$LastUpdated'") as $unprocessedRow) {
       echo "Found row\n".json_encode($unprocessedRow)."\n";
       $functionName = "handleNew".str_replace(".","__",$activeTable["Name"])."Row";
