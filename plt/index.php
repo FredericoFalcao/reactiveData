@@ -57,6 +57,10 @@
 *      SYS_PRD_BND.PyPi (LibName, AliasName)
 *      DynamicTables (LastUpdated, [PrimaryKeyColumns], ...)  
 */
+
+// Auto-include all files in this folder with extension .inc.php
+foreach(scandir(__DIR__) as $filename) if (substr($filename,-8) == ".inc.php") require_once __DIR__."/$filename";
+
 /**
  * Processes all active tables, updating rows based on trigger conditions.
  * This function scans each active table, executes dynamic trigger code,
@@ -209,137 +213,6 @@ function getPythonImports() {
         $imports .= "import {$module['LibName']}{$alias}\n";
     }
     return $imports;
-}
-/**
- * Generates PHP code for sandbox execution based on provided dynamic PHP code and row data.
- *
- * @param string $functionName       The name of the PHP function to generate.
- * @param string $onUpdate_phpCode   The PHP code to embed within the generated function.
- * @param array  $row                The row data to pass to the generated function.
- *
- * @return string                    The complete PHP code ready for sandbox execution.
- */
-function generatePHPTriggerCode($functionName, $onUpdate_phpCode, $row) {
-    // Prepare the constants definition from the database
-    $constants = getConstantsDefinition();
-
-    // Prepare the support functions definitions from the database
-    $supportFunctions = getSupportFunctionsDefinition();
-
-    // Export the row data into PHP code format
-    $rowExport = var_export($row, true);
-
-    // Assemble the complete PHP script
-    $phpCode = <<<PHP
-<?php
-// Define constants
-$constants
-
-// Include support functions
-$supportFunctions
-
-// Include system-level support file
-require_once 'sys.php';
-
-// Dynamically defined trigger function
-function $functionName(&\$data, &\$error) {
-$onUpdate_phpCode
-}
-
-// Data passed to the function
-\$data = $rowExport;
-\$initial_data = json_encode(\$data);
-
-// Execute the dynamically generated function
-$functionName(\$data, \$error);
-
-// Output the modified data as JSON
-echo json_encode(\$data);
-PHP;
-
-    return $phpCode;
-}
-/**
- * Runs dynamically generated PHP code in a sandboxed environment.
- *
- * @param string $code The PHP code to execute.
- * @param string &$stdout Captured standard output from the execution.
- * @param string &$stderr Captured error output from the execution.
- *
- * @return int Exit code of the executed PHP script (0 means success).
- */
-function runSandboxedPHP($code, &$stdout = null, &$stderr = null) {
-    // Create a temporary file to hold the PHP code
-    $tempFile = tempnam(sys_get_temp_dir(), 'sandboxed_') . '.php';
-
-    // Write the generated PHP code to the temporary file
-    file_put_contents($tempFile, $code);
-
-    // Prepare the command for executing the PHP code
-    $command = "/usr/bin/php " . escapeshellarg($tempFile);
-
-    // Descriptor spec to capture stdout and stderr
-    $descriptorspec = [
-        1 => ['pipe', 'w'], // stdout
-        2 => ['pipe', 'w'], // stderr
-    ];
-
-    // Execute the PHP code using proc_open
-    $process = proc_open($command, $descriptorspec, $pipes);
-
-    if (!is_resource($process)) {
-        unlink($tempFile);
-        throw new Exception('Failed to execute sandboxed PHP code.');
-    }
-
-    // Capture stdout and stderr
-    $stdout = stream_get_contents($pipes[1]);
-    fclose($pipes[1]);
-
-    $stderr = stream_get_contents($pipes[2]);
-    fclose($pipes[2]);
-
-    // Get the exit code
-    $exitCode = proc_close($process);
-
-    // Cleanup temporary file
-    unlink($tempFile);
-
-    return $exitCode;
-}
-/**
- * Handles the result of trigger execution, including error handling and updating database rows if necessary.
- *
- * @param int    $result       Exit code from the sandbox execution (0 for success, non-zero for failure).
- * @param string $stdout       Captured standard output from the execution (JSON encoded new row data).
- * @param string $stderr       Captured standard error from the execution (error message if any).
- * @param array  $originalRow  Original database row before trigger execution.
- * @param array  $activeTable  The active table details (including Name).
- */
-function handleTriggerExecutionResult($result, $stdout, $stderr, $originalRow, $activeTable) {
-    $tableName = $activeTable['Name'];
-
-    if ($result !== 0) {
-        // Update table error status and notify via Telegram if execution failed
-        updateTriggerError($tableName, $stderr);
-    } else {
-        // Decode the output from JSON to array
-        $newRowValue = json_decode($stdout, true);
-
-        if ($newRowValue === null) {
-            updateTriggerError($tableName, 'Invalid JSON output from sandboxed execution.');
-            return;
-        }
-
-        // Check if the new data differs from the original data
-        if ($newRowValue !== $originalRow) {
-            // Update the database row accordingly
-            updateDatabaseRow($tableName, $originalRow, $newRowValue);
-        }
-
-        // Clear any previous error status
-        clearTriggerError($tableName);
-    }
 }
 function greenText($string) { $green = "\033[0;32m"; $reset = "\033[0m"; return $green . $string . $reset ; }
 function blueText($string)  { $green = "\033[0;34m"; $reset = "\033[0m"; return $green . $string . $reset ; }
