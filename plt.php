@@ -94,7 +94,7 @@ function processAllTheActiveTables() {
         foreach(sql("SELECT Name, InputArgs_json, PhpCode FROM SYS_PRD_BND.SupportFunctions WHERE PhpCode IS NOT NULL") as $f)
                 $code .= "function {$f["Name"]} (".implode(", ",array_map(fn($s)=>"\$$s",array_keys(json_decode($f["InputArgs_json"],1)))).") {\n".$f["PhpCode"]."\n}\n";
 
-        $code .= "require_once '/root/DbContinuousIntegration/sys.php'; \n";
+        $code .= "require_once '".__DIR__."/sys.php'; \n";
         $code .= "function $functionName (&\$data, &\$error) {\n";
         $code .= $onUpdate_phpCode;
         $code .= "\n}\n";
