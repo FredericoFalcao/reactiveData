@@ -1,0 +1,27 @@
+#!/bin/bash
+
+# Prompt for user input with defaults
+read -p "Enter DB Host [localhost]: " DB_HOST
+DB_HOST=${DB_HOST:-localhost}
+
+read -p "Enter DB User [user]: " DB_USER
+DB_USER=${DB_USER:-user}
+
+read -p "Enter DB Password [pass]: " DB_PASS
+DB_PASS=${DB_PASS:-pass}
+
+read -p "Enter DB Name [database]: " DB_NAME
+DB_NAME=${DB_NAME:-database}
+
+# Generate .env.php file
+cat <<EOL > .env.php
+<?php
+
+define("DB_HOST", "$DB_HOST");
+define("DB_USER", "$DB_USER");
+define("DB_PASS", "$DB_PASS");
+define("DB_NAME", "$DB_NAME");
+
+EOL
+
+echo ".env.php created successfully."

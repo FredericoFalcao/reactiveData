@@ -1,0 +1,9 @@
+vendor/
+composer.lock
+composer.sync
+
+
+.env
+.env.php
+
+test_code.php
