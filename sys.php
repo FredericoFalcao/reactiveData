@@ -7,14 +7,14 @@
 */
 function sql_read($query) {
     global $db;
-      if (!isset($db) || is_null($db)) $db = new PDO("mysql:host=".DB_HOST.";dbname=".DB_NAME,DB_USER,DB_PASS);
+      if (!isset($db) || is_null($db)) $db = new PDO("mysql:host=".DB_HOST.";",DB_USER,DB_PASS);
       $stmt = $db->prepare($query);
         if ($stmt->execute() === false) return ["status" => "error", "query"=>$query];
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 function sql_write($query) {
     global $db;
-      if (!isset($db) || is_null($db)) $db = new PDO("mysql:host=".DB_HOST.";dbname=".DB_NAME,DB_USER,DB_PASS);
+      if (!isset($db) || is_null($db)) $db = new PDO("mysql:host=".DB_HOST.";",DB_USER,DB_PASS);
       $stmt = $db->prepare($query);
         if ($stmt->execute() === false) die ("sql error: $query");
         return $stmt->rowCount();
