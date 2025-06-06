@@ -3,7 +3,12 @@
 *   
 *     2. PLT-Level 
 *     
-*       
+*     Depends on tables: 
+*      SYS_PRD_BND.Tables (Name, onUpdate_phpCode, onUpdate_pyCode, LastUpdated, LastError)
+*      SYS_PRD_BND.Constants (Name, Type, Value)
+*      SYS_PRD_BND.SupportFunctions (Name, InputArgs_json, PhpCode)
+*      SYS_PRD_BND.PyPi (LibName, AliasName)
+*      DynamicTables (LastUpdated, [PrimaryKeyColumns], ...)  
 */
 function processAllTheActiveTables() {
   echo "Scanning all the tables that need updating...\n";
