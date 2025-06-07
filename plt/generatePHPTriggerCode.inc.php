@@ -9,6 +9,9 @@
  * @return string                    The complete PHP code ready for sandbox execution.
  */
 function generatePHPTriggerCode($functionName, $onUpdate_phpCode, $row) {
+    // Fix code if redundant opening PHP tag 
+    if (substr($onUpdate_phpCode,0,5) == "<"."?"."php") $onUpdate_phpCode = substr($onUpdate_phpCode,5);
+    
     // Prepare the constants definition from the database
     $constants = getConstantsDefinition();
 
