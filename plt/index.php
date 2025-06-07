@@ -85,7 +85,7 @@ function processActiveTable($activeTable) {
 
     ensureLastUpdatedColumnExists($Name);
 
-    $rowsToProcess = sql("SELECT * FROM $Name WHERE LastUpdated > '$LastUpdated'");
+    $rowsToProcess = sql_read_and_hydrate("SELECT * FROM $Name WHERE LastUpdated > '$LastUpdated'");
 
     foreach ($rowsToProcess as $unprocessedRow) {
         processTableRow($activeTable, $unprocessedRow);
