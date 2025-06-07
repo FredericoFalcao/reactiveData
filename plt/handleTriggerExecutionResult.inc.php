@@ -14,9 +14,12 @@ function handleTriggerExecutionResult($result, $stdout, $stderr, $originalRow, $
     if ($result !== 0) {
         // Update table error status and notify via Telegram if execution failed
         updateTriggerError($tableName, $stderr);
-    } else {
+    } else {    
         // Decode the output from JSON to array
         $newRowValue = json_decode($stdout, true);
+
+        // Ignore the hydrate columns
+        $newRowValue = array_filter($newRowValue, fn($k) => !str_ends_with($k, '_ref'), ARRAY_FILTER_USE_KEY);
 
         if ($newRowValue === null) {
             updateTriggerError($tableName, 'Invalid JSON output from sandboxed execution.');
