@@ -66,3 +66,71 @@ function getTblPrimaryKeyColName($tblName) {
         return $cols;
 }
 
+/**
+ * Executes a SELECT query and hydrates any foreign key columns with the
+ * referenced row data.
+ *
+ * The query should target a single table (e.g., "SELECT * FROM db.table WHERE …").
+ * For each foreign key in that table, an additional key named
+ * `<column>_ref` is added to each returned row containing the referenced row
+ * from the foreign table.
+ *
+ * @param string $query SQL SELECT statement for a single table.
+ * @return array        Result set with hydrated foreign key data.
+ */
+function sql_read_and_hydrate($query) {
+    $rows = sql_read($query);
+    if (empty($rows)) {
+        return $rows;
+    }
+
+    if (!preg_match('/FROM\s+([`\w\.]+)/i', $query, $m)) {
+        return $rows; // Unable to determine table
+    }
+
+    $table = str_replace('`', '', $m[1]);
+    if (strpos($table, '.') !== false) {
+        list($dbName, $tblName) = explode('.', $table, 2);
+    } else {
+        $dbName = DB_NAME;
+        $tblName = $table;
+    }
+
+    $fks = sql_read(
+        "SELECT COLUMN_NAME, REFERENCED_TABLE_SCHEMA, REFERENCED_TABLE_NAME, " .
+        "REFERENCED_COLUMN_NAME FROM information_schema.KEY_COLUMN_USAGE " .
+        "WHERE TABLE_SCHEMA = '$dbName' AND TABLE_NAME = '$tblName' " .
+        "AND REFERENCED_TABLE_NAME IS NOT NULL"
+    );
+
+    if (empty($fks)) {
+        return $rows; // no foreign keys
+    }
+
+    foreach ($rows as &$row) {
+        foreach ($fks as $fk) {
+            $col = $fk['COLUMN_NAME'];
+            if (!isset($row[$col])) {
+                continue;
+            }
+
+            $val = $row[$col];
+            if ($val === null) {
+                $row[$col . '_ref'] = null;
+                continue;
+            }
+
+            $refTable = $fk['REFERENCED_TABLE_SCHEMA'] . '.' . $fk['REFERENCED_TABLE_NAME'];
+            $refCol = $fk['REFERENCED_COLUMN_NAME'];
+            $condition = is_numeric($val)
+                ? "$refCol = $val"
+                : "$refCol = '" . str_replace("'", "''", $val) . "'";
+            $refRow = sql_read("SELECT * FROM $refTable WHERE $condition LIMIT 1");
+            $row[$col . '_ref'] = $refRow[0] ?? null;
+        }
+    }
+    unset($row);
+
+    return $rows;
+}
+
