@@ -149,6 +149,7 @@ function runPHPCodeTrigger($functionName, $activeTable, $row) {
  * Executes database-level dynamic Python trigger code.
  */
 function runPythonCodeTrigger($functionName, $activeTable, $row) {
+    echo "Running Python Code trigger...\n";
     $pyCode = generatePythonTriggerCode($functionName, $activeTable['onUpdate_pyCode'], $row);
     $result = runSandboxedPython($pyCode,$stdout,$stderr);
 
