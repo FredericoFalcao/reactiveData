@@ -166,7 +166,7 @@ function updateDatabaseRow($tableName, $originalRow, $newRowValue) {
 
     $setStatements = [];
     foreach ($newRowValue as $k => $v) {
-        $value = is_numeric($v) ? $v : "'" . str_replace("'", "''", $v) . "'";
+        $value = is_numeric($v) ? $v : "'" . str_replace("'", "''", is_string($v)?$v:json_encode($v)) . "'";
         $setStatements[] = "$k = $value";
     }
 

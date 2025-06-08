@@ -110,9 +110,7 @@ function sql_read_and_hydrate($query) {
     foreach ($rows as &$row) {
         foreach ($fks as $fk) {
             $col = $fk['COLUMN_NAME'];
-            if (!isset($row[$col])) {
-                continue;
-            }
+            if (!isset($row[$col])) continue;
 
             $val = $row[$col];
             if ($val === null) {

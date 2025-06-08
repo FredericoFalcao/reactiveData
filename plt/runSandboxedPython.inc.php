@@ -11,6 +11,7 @@
 function runSandboxedPython($code, &$stdout = null, &$stderr = null) {
     // Create a temporary file to hold the Python code
     $tempFile = tempnam(sys_get_temp_dir(), 'sandboxed_') . '.py';
+    echo "Creating ".redText("python temp code file")." for sandboxed execution at: $tempFile \n";
 
     // Write the generated Python code to the temporary file
     file_put_contents($tempFile, $code);

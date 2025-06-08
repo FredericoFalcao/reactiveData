@@ -1,5 +1,6 @@
 {
     "require": {
-        "denpa\/php-bitcoinrpc": "^2.2"
+        "psr/log": "*",
+        "symfony/console": "*"
     }
 }
