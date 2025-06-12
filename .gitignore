@@ -11,3 +11,7 @@ test_code.php
 modules/
 
 requirements.txt
+package.json
+package-lock.json
+npm.sync
+node_modules/

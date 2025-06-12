@@ -6,7 +6,7 @@
  * Overview:
 * This PHP script automates database updates by processing rows marked for action in various tables.
 * It dynamically executes predefined functions based on table-specific instructions stored in the database.
-* Functions are executed in either PHP or Python environments depending on configuration.
+* Functions are executed in PHP, Python, or JavaScript environments depending on configuration.
 * 
 * How It Works:
 * 1. The script queries the `SYS_PRD_BND.Tables` table to determine which tables require processing.
@@ -19,8 +19,8 @@
 * 
 * Tables and Their Purpose:
 * - SYS_PRD_BND.Tables:
-*   Defines active tables and their respective PHP or Python trigger codes.
-*   Columns: Name, onUpdate_phpCode, onUpdate_pyCode, LastUpdated, LastError
+*   Defines active tables and their respective PHP, Python, or JavaScript trigger codes.
+*   Columns: Name, onUpdate_phpCode, onUpdate_pyCode, onUpdate_jsCode, LastUpdated, LastError
 *
 * - SYS_PRD_BND.Constants:
 *   Holds constants that are injected into the PHP environment during execution.
@@ -33,6 +33,10 @@
 * - SYS_PRD_BND.PyPi:
 *   Lists external Python libraries imported into Python trigger execution.
 *   Columns: LibName, AliasName
+*
+* - SYS_PRD_BND.Npm:
+*   Lists external Node modules imported into JavaScript trigger execution.
+*   Columns: PackageName, AliasName, VersionOrTag
 * 
 * Dynamic Tables:
 * - Application-specific tables, each must include at least:
@@ -68,7 +72,7 @@ foreach(scandir(__DIR__) as $filename) if (substr($filename,-8) == ".inc.php") r
  */
 function processAllTheActiveTables() {
     echo "Scanning all the tables that need updating...\n";
-    $activeTables = sql("SELECT Name, onUpdate_phpCode, onUpdate_pyCode, LastUpdated FROM SYS_PRD_BND.Tables");
+    $activeTables = sql("SELECT Name, onUpdate_phpCode, onUpdate_pyCode, onUpdate_jsCode, LastUpdated FROM SYS_PRD_BND.Tables");
 
     foreach ($activeTables as $activeTable) {
         processActiveTable($activeTable);
@@ -118,6 +122,10 @@ function processTableRow($activeTable, $unprocessedRow) {
     if (!empty($activeTable['onUpdate_pyCode'])) {
         runPythonCodeTrigger($functionName, $activeTable, $unprocessedRow);
     }
+
+    if (!empty($activeTable['onUpdate_jsCode'])) {
+        runJavascriptCodeTrigger($functionName, $activeTable, $unprocessedRow);
+    }
 }
 
 /**
@@ -152,6 +160,17 @@ function runPythonCodeTrigger($functionName, $activeTable, $row) {
     echo "Running Python Code trigger...\n";
     $pyCode = generatePythonTriggerCode($functionName, $activeTable['onUpdate_pyCode'], $row);
     $result = runSandboxedPython($pyCode,$stdout,$stderr);
+
+    handleTriggerExecutionResult($result, $stdout, $stderr, $row, $activeTable);
+}
+
+/**
+ * Executes database-level dynamic JavaScript trigger code.
+ */
+function runJavascriptCodeTrigger($functionName, $activeTable, $row) {
+    echo "Running JavaScript Code trigger...\n";
+    $jsCode = generateJSTriggerCode($functionName, $activeTable['onUpdate_jsCode'], $row);
+    $result = runSandboxedJavascript($jsCode, $stdout, $stderr);
 
     handleTriggerExecutionResult($result, $stdout, $stderr, $row, $activeTable);
 }
@@ -214,6 +233,43 @@ function getPythonImports() {
         $imports .= "import {$module['LibName']}{$alias}\n";
     }
     return $imports;
+}
+
+function getNodeRequires() {
+    $requires = "";
+    foreach (sql("SELECT PackageName, AliasName FROM SYS_PRD_BND.Npm") as $module) {
+        $alias = !empty($module['AliasName']) ? $module['AliasName'] : basename($module['PackageName']);
+        $alias = preg_replace('/[^A-Za-z0-9_]/', '_', $alias);
+        $requires .= "const $alias = require('{$module['PackageName']}');\n";
+    }
+    return $requires;
+}
+
+function getJSConstantsDefinition() {
+    $constants = "";
+    foreach (sql("SELECT Name, Type, Value FROM SYS_PRD_BND.Constants") as $const) {
+        switch ($const['Type']) {
+            case 'String':
+                $val = '`' . str_replace('`', '\\`', $const['Value']) . '`';
+                break;
+            case 'Json':
+                $val = json_encode(json_decode($const['Value'], true));
+                break;
+            default:
+                $val = $const['Value'];
+        }
+        $constants .= "const {$const['Name']} = {$val};\n";
+    }
+    return $constants;
+}
+
+function getJavascriptSupportFunctionsDefinition() {
+    $functions = "";
+    foreach (sql("SELECT Name, InputArgs_json, JavascriptCode FROM SYS_PRD_BND.SupportFunctions WHERE JavascriptCode IS NOT NULL") as $f) {
+        $args = implode(', ', array_keys(json_decode($f['InputArgs_json'], true)));
+        $functions .= "function {$f['Name']}($args) {\n{$f['JavascriptCode']}\n}\n";
+    }
+    return $functions;
 }
 function greenText($string) { $green = "\033[0;32m"; $reset = "\033[0m"; return $green . $string . $reset ; }
 function blueText($string)  { $green = "\033[0;34m"; $reset = "\033[0m"; return $green . $string . $reset ; }
